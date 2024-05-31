@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <h3>Hello, This is a Demo about Passkey Login.</h3>
+
+  I write some demos about user register and login below:
+
+  <h4>当前登录状态：</h4>
+  <p>
+    <% if (user) {%>
+      登录名：<%= user.name %>
+        <%} else {%>
+          未登录
+          <%}%>
+  </p>
+  <ul>
+    <li><a href="/register">Register</a></li>
+
+    <li><a href="/login">Login</a></li>
+
+    <li><a href="/passkey">Passkey Manage</a></li>
+
+    <li><a href="/passkey-login">Login By Passkey</a></li>
+
+    <li><a href="/passkey-login-2">Login By Passkey Without username</a></li>
+
+    <li><a href="/logout">Logout</a></li>
+  </ul>
+
+</body>
+
+</html>

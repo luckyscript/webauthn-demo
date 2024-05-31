@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <% if (user) {%>
+    <h3>
+      Passkey Manage:
+    </h3>
+    <table>
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>credId</th>
+          <th>publicKey</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% authenticator.forEach(function(item) { %>
+          <tr>
+            <td><%= item.id %></td>
+            <td><%= item.credId %></td>
+            <td><%= item.publicKey %></td>
+          </tr>
+          <%})%>
+      </tbody>
+    </table>
+
+    <button type="button" id="passkey-button" onclick="createPasskey()">Create a new
+      passkey</button>
+    <%} else {%>
+      <h3>
+        Passkey Manage:
+      </h3>
+      <p>
+        Please login first. <a href="/login">Login By Password</a> or <a href="/passkey-login">Login By Passkey</a>
+      </p>
+      <%}%>
+
+        <script>
+          if (window.PublicKeyCredential &&
+            PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable &&
+            PublicKeyCredential.isConditionalMediationAvailable) {
+            Promise.all([
+              PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(),
+              PublicKeyCredential.isConditionalMediationAvailable(),
+            ]).then(results => {
+              if (results.every(r => r === true)) {
+                document.querySelector('#passkey-button').style.display = 'block';
+              }
+            });
+          }
+
+          async function createPasskey() {
+            const info = await fetch("/api/passkey/getKeyInfo").then(res => res.json())
+
+            const publicKeyCredentialCreationOptions = {
+              ...info,
+              challenge: base64URLdecode(info.challengeBase64),
+              user: {
+                id: base64URLdecode(info.userIdBase64),
+                name: info.user.name,
+                displayName: info.user.displayName,
+              },
+              excludeCredentials: info.excludeCredentials.map(item => ({
+                type: item.type,
+                id: base64URLdecode(item.credId),
+                transports: item.transports.split(','),
+              }))
+            };
+
+            const data = await navigator.credentials.create({
+              publicKey: publicKeyCredentialCreationOptions
+            });
+
+            const transports = data.response.getTransports();
+
+            const passkey = {
+              id: data.id,
+              type: data.type,
+              transports,
+              rawId: base64URLencode(data.rawId),
+              response: {
+                clientDataJSON: base64URLencode(data.response.clientDataJSON),
+                attestationObject: base64URLencode(data.response.attestationObject),
+              },
+            };
+            await fetch("/api/passkey/register", {
+              method: "post",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(passkey)
+            });
+
+            alert('创建完成');
+
+            location.reload();
+          }
+
+          function base64URLencode(buffer) {
+            return btoa(Array.from(new Uint8Array(buffer), b => String.fromCharCode(b)).join(''))
+              .replace(/\+/g, '-')
+              .replace(/\//g, '_')
+              .replace(/=+$/, '');
+          }
+
+          function base64URLdecode(base64URL) {
+            const m = base64URL.length % 4;
+            return Uint8Array.from(
+              atob(
+                base64URL
+                  .replace(/-/g, '+')
+                  .replace(/_/g, '/')
+                  .padEnd(base64URL.length + (m === 0 ? 0 : 4 - m), '=')
+              ),
+              c => c.charCodeAt(0)
+            ).buffer;
+          }
+        </script>
+</body>
+
+</html>
